@@ -30,7 +30,7 @@ This setup uses the analog microphone input of the Arduino UNO Q instead of a US
 
 ## Setup
 
-> **This step is required once per board.** It configures the ALSA audio subsystem, creates the device symlink expected by `arduino-app-cli`, and patches the Docker image to support the analog microphone.
+> **This step is required once per board.** It configures the ALSA mixer for boot-time init, creates the `/dev/snd/by-id` device symlink expected by `arduino-app-cli`, deploys this example into the App Lab examples list, and patches the `arduino:zephyr` core to work around a regression that breaks the Adafruit_BusIO library.
 
 Clone the repository on the Arduino UNO Q and run the setup script:
 
@@ -89,17 +89,19 @@ The `keyword_spotting` Brick continuously monitors the analog microphone input. 
 
 #### Why a setup script is needed
 
-The Arduino UNO Q uses a **Qualcomm QRB2210 SoC** with a Qualcomm LPASS audio DSP (Q6ASM). This DSP resets all ALSA mixer controls to `off` every time an audio capture session closes. The setup script:
+The Arduino UNO Q codec is exposed by ALSA but is not a USB device, so `arduino-app-cli`'s default microphone discovery (which expects a USB device under `/dev/snd/by-id/usb-*`) skips it. The setup script:
 
-- Configures the ALSA mixer and installs a systemd service that re-applies the configuration at boot.
-- Creates the `/dev/snd/by-id` device symlink expected by `arduino-app-cli` to detect the microphone.
-- Patches the Docker image used by `arduino-app-cli` so that its Python `Microphone` class re-runs the mixer setup before opening each PCM session, and uses the full ALSA device name (`plughw:CARD=ArduinoImolaHPH,DEV=2`) required inside containers.
+- Configures the ALSA mixer and installs a systemd service (`mic-uno-q.service`) that re-applies the mixer setup at boot.
+- Creates a `/dev/snd/by-id/usb-Arduino_Analog_Microphone-00` symlink (with a persistent udev rule) so `arduino-app-cli`'s deploy validator accepts the codec.
+- Ensures `/etc/asound.conf` is absent — any user-defined ALSA config on the host interferes with PipeWire/WirePlumber routing inside the app containers and breaks PCM open.
+- Patches `arduino:zephyr 0.55.0`'s `gpio_lowlevel_stm32.h` to restore the standard Arduino macro contract (`portOutputRegister(digitalPinToPort(pin))`), which is needed for libraries like `Adafruit_BusIO` to compile.
 
 ### Understanding the Code
 
 **Python side (`python/main.py`):**
 
-- `spotter = KeywordSpotting()` — initializes the audio listener on the analog mic input.
+- `mic = Microphone(device="plughw:CARD=ArduinoImolaHPH,DEV=2", shared=False)` — opens the analog codec directly (the default `usb:1` device name is for actual USB mics and fails here).
+- `spotter = KeywordSpotting(mic=mic)` — initializes the keyword spotter with that microphone instead of the default.
 - `spotter.on_detect("Warmer-light", ...)` — registers a callback for each keyword.
 - `Bridge.call("warmer_light")` — notifies the microcontroller which keyword was detected.
 
