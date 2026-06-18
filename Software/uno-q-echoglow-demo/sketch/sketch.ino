@@ -9,29 +9,54 @@
 
 Arduino_LED_Matrix matrix;
 
+const uint32_t WarmFrame[4] = {
+  0x07009209,
+  0xc851428a,
+  0x13904900,
+  0xe0000000,
+};
+
+const uint32_t CoolFrame[4] = {
+  0x02011104,
+  0x901f00f8,
+  0x09208880,
+  0x40000000,
+};
+
+const uint32_t BrightFrame[4] = {
+  0x8f88fe0f,
+  0xf8ffe7ff,
+  0x1ff07f11,
+  0xf1000000,
+};
+
+const uint32_t DimFrame[4] = {
+  0x00000000,
+  0x800e0070,
+  0x01000000,
+  0x00000000,
+};
+
 void setBuiltinLed(bool on) {
-  // The onboard LED is active-low on UNO Q examples.
+  // The built-in LED is only a tiny confirmation indicator in this demo.
+  // The main feedback is the onboard LED Matrix.
   digitalWrite(LED_BUILTIN, on ? LOW : HIGH);
 }
 
-void flashBuiltinLed(int count, int onMs = 80, int offMs = 80) {
-  for (int i = 0; i < count; i++) {
-    setBuiltinLed(true);
-    delay(onMs);
-    setBuiltinLed(false);
-    delay(offMs);
-  }
+void pulseBuiltinLed(int onMs = 80) {
+  setBuiltinLed(true);
+  delay(onMs);
+  setBuiltinLed(false);
+}
+
+void showFrame(const uint32_t frame[4]) {
+  matrix.clear();
+  delay(30);
+  matrix.loadFrame(frame);
 }
 
 void showHeart() {
-  matrix.loadFrame(HeartStatic);
-}
-
-void animateHeart() {
-  matrix.loadSequence(HeartAnim);
-  matrix.playSequence();
-  delay(650);
-  matrix.loadFrame(HeartStatic);
+  showFrame(HeartStatic);
 }
 
 void setup() {
@@ -55,27 +80,23 @@ void loop() {
 }
 
 void warmer_light() {
-  showHeart();
-  flashBuiltinLed(1, 180, 120);
+  showFrame(WarmFrame);
+  pulseBuiltinLed(80);
 }
 
 void cooler_light() {
-  matrix.clear();
-  delay(150);
-  showHeart();
-  flashBuiltinLed(2, 90, 90);
+  showFrame(CoolFrame);
+  pulseBuiltinLed(80);
 }
 
 void dimmer() {
-  matrix.clear();
-  flashBuiltinLed(4, 50, 60);
-  delay(200);
-  showHeart();
+  showFrame(DimFrame);
+  pulseBuiltinLed(80);
 }
 
 void brighter() {
-  animateHeart();
-  flashBuiltinLed(3, 70, 70);
+  showFrame(BrightFrame);
+  pulseBuiltinLed(80);
 }
 
 void reset_demo() {
