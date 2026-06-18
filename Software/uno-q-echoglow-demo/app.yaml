@@ -1,0 +1,6 @@
+name: UNO Q EchoGlow Demo
+icon: 💡
+description: No-extra-hardware demo for the EchoGlow workshop. Simulates the four voice commands from a web panel and drives the onboard LED Matrix through RouterBridge.
+ports:
+  - 7000
+bricks: []
