@@ -11,7 +11,7 @@ The full EchoGlow project uses an analog microphone, Edge Impulse keyword spotti
 - `Brighter`
 - `Dimmer`
 
-When you click a button in the browser, the Python side calls the same Bridge handler name that the real keyword spotting app uses. The Arduino sketch then updates the onboard LED Matrix and flashes the built-in LED.
+When you click a button in the browser, the Python side calls the same Bridge handler name that the real keyword spotting app uses. The Arduino sketch then updates the onboard LED Matrix and briefly flashes the built-in LED as a small confirmation indicator.
 
 ```text
 Browser button
@@ -20,6 +20,19 @@ Browser button
     -> Arduino sketch
     -> onboard LED Matrix + built-in LED
 ```
+
+## Expected demo behavior
+
+| Button | Onboard LED Matrix feedback | Built-in LED |
+|---|---|---|
+| `Warmer-light` | Sun / warm-light icon | Short confirmation pulse |
+| `Cooler-light` | Snowflake / cool-light icon | Short confirmation pulse |
+| `Brighter` | Large bright icon | Short confirmation pulse |
+| `Dimmer` | Small dim icon | Short confirmation pulse |
+| `Reset demo` | Heart idle screen | Off |
+| `Clear matrix` | Matrix off | Off |
+
+The built-in LED is not the main display for this demo. The primary feedback should be the LED Matrix icon.
 
 ## Hardware required
 
