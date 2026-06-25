@@ -8,9 +8,9 @@
 Arduino_LED_Matrix matrix;
 
 const uint32_t IdleFrame[4] = {
-  0x030c079e,
-  0x7fe3fc1f,
-  0x80f00600,
+  0x00030c79,
+  0xe7fe3fc1,
+  0xf80f0060,
   0x00000000,
 };
 
