@@ -1,14 +1,11 @@
-# UNO Q EchoGlow Workshop
+# UNO Q Voice Matrix Workshop
 
-<img src="Software/uno-q-echoglow/assets/docs_assets/EchoGlow.jpeg" alt="drawing" width="250" height="200"/>
+This branch adapts the original UNO Q EchoGlow example for a simpler hardware setup:
 
+- USB microphone for keyword spotting
+- Arduino UNO Q onboard LED matrix for visual feedback
 
-The UNO Q EchoGlow is an AI-powered desktop light controlled by voice commands. It detects the keywords "Warmer-light", "Cooler-light", "Dimmer", and "Brighter" through an analog microphone connected directly to the Arduino UNO Q, and controls a NeoPixel strip connected via the onboard Qwiic port. These commands are trained on Edge Impulse’s platform and uploaded to the Arduino UNO Q inside the EchoGlow.
-Be sure to visit the project every now and then to check for updates and downloads:
-
-This setup uses the analog microphone input of the Arduino UNO Q instead of a USB microphone (unlike the standard keyword-spotting example), requiring a one-time board configuration before launching the app.
-
-[https://hackaday.io/project/205386-arduino-uno-q-echoglow](https://hackaday.io/project/205386-arduino-uno-q-echoglow)
+The app detects the keywords `Warmer-light`, `Cooler-light`, `Dimmer`, and `Brighter` with Arduino App Lab's `keyword_spotting` Brick. When a keyword is detected, the Python app calls the microcontroller through the Bridge, and the sketch shows a matching pattern on the onboard LED matrix.
 
 ## Bricks Used
 
@@ -16,96 +13,68 @@ This setup uses the analog microphone input of the Arduino UNO Q instead of a US
 
 ## Hardware and Software Requirements
 
-![Hardware setup](Software/uno-q-echoglow/assets/docs_assets/hardware-setup.jpeg)
-
 ### Hardware
 
-- [Arduino® UNO Q](https://store.arduino.cc/products/uno-q)
-- SupplyFrame analog microphone board (connected to the analog mic input)
-- SupplyFrame NeoDriver I2C board (address `0x60`) with NeoPixel strip, connected to the Qwiic port
+- Arduino UNO Q
+- USB microphone connected to the UNO Q
+- No external NeoDriver or NeoPixel strip required
 
 ### Software
 
 - Arduino App Lab
-- One-time board setup — see [Setup](#setup) below
 
 ## Setup
 
-> **This step is required once per board.** It configures the ALSA audio subsystem, creates the device symlink expected by `arduino-app-cli`, and patches the Docker image to support the analog microphone.
+This USB microphone version does not require the analog microphone setup script. The original script is still present in the repository for the analog microphone + NeoPixel version, but this branch is intended to run with the default USB microphone path used by App Lab.
 
-Clone the repository on the Arduino UNO Q and run the setup script:
+Clone this branch on the Arduino UNO Q:
 
 ```bash
-sudo git clone https://github.com/ElectronicCats/Qualcomm-Arduino-Edge-WS2026
+git clone -b learn-usb-mic-led-matrix https://github.com/Alex129xx/Qualcomm-Arduino-Edge-WS2026
 cd Qualcomm-Arduino-Edge-WS2026
-sudo Software/setup-arduino-q-mic-applab.sh
 ```
 
-After the script completes, **reboot the board**:
-
-```bash
-sudo reboot
-```
-
-The script copies this example to `/home/arduino/ArduinoApps/` automatically. If you need to re-deploy it manually:
-
-```bash
-sudo Software/setup-arduino-q-mic-applab.sh --deploy-example
-```
-#### Notes:
-```
-When running this firmware, only the analog microphone is available (no USB microphone). To revert this, format the UNO Q. 
-```
+If you need to copy the example into the Arduino App Lab examples directory manually, copy `Software/uno-q-echoglow` into the examples location used by your board firmware.
 
 ## How to Use the Example
 
 ### Hardware Setup
 
-1. Connect the analog microphone board to the analog mic input of the Arduino UNO Q.
-2. Connect the SupplyFrame NeoDriver I2C board to the **Qwiic port** on the Arduino UNO Q.
-3. Connect a NeoPixel strip to the NeoDriver (up to 5 pixels supported out of the box).
-
+1. Connect the USB microphone to the Arduino UNO Q.
+2. No Qwiic NeoDriver or NeoPixel strip is needed.
+3. Use the onboard LED matrix for feedback.
 
 ### Launch the App
 
-1. Open **Arduino App Lab** and connect to the board using **Network Mode**.
-2. Open this example and click the **Play** button in the top right corner.
-3. Wait for the app to launch.
+1. Open Arduino App Lab.
+2. Connect to the board using Network Mode.
+3. Open `UNO Q Voice Matrix`.
+4. Click the Play button in the top right corner.
+5. Say one of the voice commands into the USB microphone.
 
-
-4. Say one of the voice commands into the microphone.
-
-| Keyword | Action |
+| Keyword | LED Matrix Action |
 |---|---|
-| **Warmer-light** | Sets NeoPixel color to warm white (RGB 255, 194, 138) |
-| **Cooler-light** | Sets NeoPixel color to cool white (RGB 144, 213, 255) |
-| **Brighter** | Increases brightness by 40% |
-| **Dimmer** | Decreases brightness by 40% |
+| `Warmer-light` | Blinks a warm/sun-style pattern |
+| `Cooler-light` | Blinks a cool/snowflake-style pattern |
+| `Brighter` | Blinks a full-bright matrix pattern |
+| `Dimmer` | Shows a small dim center pattern |
 
-### How it Works
+## How it Works
 
-The `keyword_spotting` Brick continuously monitors the analog microphone input. When a keyword is detected, it calls the microcontroller via the Bridge, which adjusts the NeoPixel strip accordingly. The NeoPixel starts at neutral white (RGB 255, 255, 255) at boot.
+### Python side (`python/main.py`)
 
+- `spotter = KeywordSpotting()` initializes keyword spotting with App Lab's default microphone path, intended here for a USB microphone.
+- `spotter.on_detect(...)` registers callbacks for each keyword.
+- `Bridge.call(...)` notifies the microcontroller which keyword was detected.
 
-#### Why a setup script is needed
+### Microcontroller side (`sketch/sketch.ino`)
 
-The Arduino UNO Q uses a **Qualcomm QRB2210 SoC** with a Qualcomm LPASS audio DSP (Q6ASM). This DSP resets all ALSA mixer controls to `off` every time an audio capture session closes. The setup script:
+- `Arduino_LED_Matrix matrix;` controls the onboard LED matrix.
+- `Bridge.provide(...)` exposes handlers to the Python side.
+- `warmer_light()`, `cooler_light()`, `brighter()`, and `dimmer()` show different LED matrix patterns.
 
-- Configures the ALSA mixer and installs a systemd service that re-applies the configuration at boot.
-- Creates the `/dev/snd/by-id` device symlink expected by `arduino-app-cli` to detect the microphone.
-- Patches the Docker image used by `arduino-app-cli` so that its Python `Microphone` class re-runs the mixer setup before opening each PCM session, and uses the full ALSA device name (`plughw:CARD=ArduinoImolaHPH,DEV=2`) required inside containers.
+## Notes
 
-### Understanding the Code
-
-**Python side (`python/main.py`):**
-
-- `spotter = KeywordSpotting()` — initializes the audio listener on the analog mic input.
-- `spotter.on_detect("Warmer-light", ...)` — registers a callback for each keyword.
-- `Bridge.call("warmer_light")` — notifies the microcontroller which keyword was detected.
-
-**Microcontroller side (`sketch/sketch.ino`):**
-
-- `seesaw_NeoPixel strip(..., &Wire1)` — the NeoDriver is on `Wire1`, which maps to the Qwiic port on the UNO Q.
-- `Bridge.provide("warmer_light", warmer_light)` — registers the handler called by the Python side.
-- `warmer_light()` / `cooler_light()` — set the NeoPixel color to warm or cool white.
-- `brighter()` / `dimmer()` — increase or decrease the global brightness by 40%.
+- This branch removes the external NeoDriver/NeoPixel dependency from the sketch.
+- The onboard LED matrix is monochrome, so `Warmer-light` and `Cooler-light` are represented by different patterns instead of different colors.
+- If App Lab cannot find the USB microphone automatically, check the board with `arecord -l` and then explicitly configure the ALSA microphone device in `python/main.py`.
