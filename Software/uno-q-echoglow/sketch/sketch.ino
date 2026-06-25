@@ -2,42 +2,65 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
-#include <Adafruit_seesaw.h>
-#include <seesaw_neopixel.h>
 #include <Arduino_LED_Matrix.h>
 #include <Arduino_RouterBridge.h>
 
-#include "heart_frames.h"
-
 Arduino_LED_Matrix matrix;
 
-#define NEODRIVER_ADDR  0x60
-#define NEO_PIN         15
-#define NUM_PIXELS      5
+const uint32_t IdleFrame[4] = {
+  0x030c079e,
+  0x7fe3fc1f,
+  0x80f00600,
+  0x00000000,
+};
 
-seesaw_NeoPixel strip(NUM_PIXELS, NEO_PIN, NEO_GRB + NEO_KHZ800, &Wire1);
+const uint32_t WarmFrame[4] = {
+  0x0602641f,
+  0x83fc3fc1,
+  0xf8264060,
+  0x00000000,
+};
 
-bool neoReady = false;
-uint8_t brightness = 50;
-uint8_t r = 255, g = 255, b = 255;
+const uint32_t CoolFrame[4] = {
+  0x06026416,
+  0x8ffffff1,
+  0x68264060,
+  0x00000000,
+};
 
-void setAll(uint8_t red, uint8_t green, uint8_t blue) {
-  if (!neoReady) return;
-  for (int i = 0; i < NUM_PIXELS; i++)
-    strip.setPixelColor(i, strip.Color(red, green, blue));
-  strip.show();
+const uint32_t BrightFrame[4] = {
+  0xffffffff,
+  0xffffffff,
+  0xffffffff,
+  0x00000000,
+};
+
+const uint32_t DimFrame[4] = {
+  0x00000000,
+  0x00600600,
+  0x00000000,
+  0x00000000,
+};
+
+void showFrame(const uint32_t frame[4], uint16_t holdMs = 1000) {
+  matrix.loadFrame(frame);
+  delay(holdMs);
+}
+
+void blinkFrame(const uint32_t frame[4], uint8_t times, uint16_t onMs, uint16_t offMs) {
+  for (uint8_t i = 0; i < times; i++) {
+    matrix.loadFrame(frame);
+    delay(onMs);
+    matrix.clear();
+    delay(offMs);
+  }
+  matrix.loadFrame(IdleFrame);
 }
 
 void setup() {
   matrix.begin();
   matrix.clear();
-  matrix.loadFrame(HeartStatic);
-
-  neoReady = strip.begin(NEODRIVER_ADDR);
-  if (neoReady) {
-    strip.setBrightness(brightness);
-    setAll(r, g, b);
-  }
+  matrix.loadFrame(IdleFrame);
 
   Bridge.begin();
   Bridge.provide("warmer_light", warmer_light);
@@ -48,35 +71,19 @@ void setup() {
 
 void loop() {}
 
-void animateHeart() {
-  matrix.loadSequence(HeartAnim);
-  matrix.playSequence();
-  delay(1000);
-  matrix.loadFrame(HeartStatic);
-}
-
 void warmer_light() {
-  r = 255; g = 194; b = 138;
-  setAll(r, g, b);
-  animateHeart();
+  blinkFrame(WarmFrame, 2, 350, 120);
 }
 
 void cooler_light() {
-  r = 144; g = 213; b = 255;
-  setAll(r, g, b);
-  animateHeart();
+  blinkFrame(CoolFrame, 2, 350, 120);
 }
 
 void dimmer() {
-  brightness = (uint8_t)max(1, (int)(brightness * 0.6));
-  if (neoReady) strip.setBrightness(brightness);
-  setAll(r, g, b);
-  animateHeart();
+  showFrame(DimFrame, 900);
+  matrix.loadFrame(IdleFrame);
 }
 
 void brighter() {
-  brightness = (uint8_t)min(255, (int)(brightness * 1.4));
-  if (neoReady) strip.setBrightness(brightness);
-  setAll(r, g, b);
-  animateHeart();
+  blinkFrame(BrightFrame, 2, 180, 120);
 }
