@@ -1,5 +1,5 @@
 name: UNO Q Voice Matrix
-icon: light_bulb
+icon: 💡
 description: AI-powered LED matrix demo controlled by voice commands. Detects keywords "Warmer-light", "Cooler-light", "Dimmer", and "Brighter" using a USB microphone and shows matching feedback on the onboard Arduino UNO Q LED matrix.
 
 bricks:
