@@ -22,6 +22,13 @@ The app detects the keywords `Warmer-light`, `Cooler-light`, `Dimmer`, and `Brig
 ### Software
 
 - Arduino App Lab
+- This app requires a custom Edge Impulse keyword spotting model with the labels:
+Warmer-light, Cooler-light, Dimmer, Brighter.
+
+    If the App Lab keyword runner logs show only:
+    ['background', 'hey_arduino', 'other']
+
+    then the default Hey Arduino model is being used, and the four command callbacks will not trigger.
 
 ## Setup
 
