@@ -4,8 +4,9 @@ This branch adapts the original UNO Q EchoGlow example for a simpler hardware se
 
 - USB microphone for keyword spotting
 - Arduino UNO Q onboard LED matrix for visual feedback
+- No external NeoDriver, NeoPixel strip, or analog microphone setup required
 
-The app detects the keywords `Warmer-light`, `Cooler-light`, `Dimmer`, and `Brighter` with Arduino App Lab's `keyword_spotting` Brick. When a keyword is detected, the Python app calls the microcontroller through the Bridge, and the sketch shows a matching pattern on the onboard LED matrix. When no command is active, the matrix keeps showing a heart icon.
+The app detects voice commands with Arduino App Lab's `keyword_spotting` Brick. When a keyword is detected, the Python app calls the microcontroller through the Bridge, and the sketch shows a matching icon on the onboard LED matrix. When no command is active, the matrix keeps showing a heart icon.
 
 ## Bricks Used
 
@@ -17,54 +18,75 @@ The app detects the keywords `Warmer-light`, `Cooler-light`, `Dimmer`, and `Brig
 
 - Arduino UNO Q
 - USB microphone connected to the UNO Q
-- No external NeoDriver or NeoPixel strip required
 
 ### Software
 
 - Arduino App Lab
-- This app requires a custom Edge Impulse keyword spotting model with the labels:
-Warmer-light, Cooler-light, Dimmer, Brighter.
+- A custom Edge Impulse keyword spotting model with the labels used by `python/main.py`
 
-    If the App Lab keyword runner logs show only:
-    ['background', 'hey_arduino', 'other']
+The current Python app accepts both the English labels and the pinyin labels below:
 
-    then the default Hey Arduino model is being used, and the four command callbacks will not trigger.
+| Action | English label | Pinyin label |
+|---|---|---|
+| Warmer light | `Warmer-light` | `nuan_yidian` |
+| Cooler light | `Cooler-light` | `leng_yidian` |
+| Brighter | `Brighter` | `liang_yidian` |
+| Dimmer | `Dimmer` | `an_yidian` |
 
-## Setup
+If the App Lab keyword runner logs show only:
 
-This USB microphone version does not require the analog microphone setup script. The original script is still present in the repository for the analog microphone + NeoPixel version, but this branch is intended to run with the default USB microphone path used by App Lab.
+```text
+['background', 'hey_arduino', 'other']
+```
+
+then the default Hey Arduino model is being used, and the four command callbacks will not trigger.
+
+## Setup on the UNO Q
 
 Clone this branch on the Arduino UNO Q:
 
 ```bash
-git clone -b learn-usb-mic-led-matrix https://github.com/Alex129xx/Qualcomm-Arduino-Edge-WS2026
+git clone -b learn https://github.com/Alex129xx/Qualcomm-Arduino-Edge-WS2026
 cd Qualcomm-Arduino-Edge-WS2026
 ```
 
-If you need to copy the example into the Arduino App Lab examples directory manually, copy `Software/uno-q-echoglow` into the examples location used by your board firmware.
+If you already cloned the repository, update it instead:
+
+```bash
+cd /home/arduino/Qualcomm-Arduino-Edge-WS2026
+git checkout learn
+git pull origin learn
+```
+
+Deploy the App Lab example with the USB microphone setup script:
+
+```bash
+sudo Software/setup-uno-q-usb-voice-matrix-applab.sh
+```
+
+This script checks for the USB microphone, removes an old `/etc/asound.conf` if present, and copies `Software/uno-q-echoglow` to:
+
+```text
+/home/arduino/ArduinoApps/uno-q-echoglow
+```
+
+The old analog microphone setup script has been removed from this branch because this version uses a USB microphone.
 
 ## How to Use the Example
 
-### Hardware Setup
-
 1. Connect the USB microphone to the Arduino UNO Q.
-2. No Qwiic NeoDriver or NeoPixel strip is needed.
-3. Use the onboard LED matrix for feedback.
-
-### Launch the App
-
-1. Open Arduino App Lab.
-2. Connect to the board using Network Mode.
-3. Open `UNO Q Voice Matrix`.
-4. Click the Play button in the top right corner.
-5. Say one of the voice commands into the USB microphone.
+2. Open Arduino App Lab.
+3. Connect to the board using Network Mode.
+4. Open `UNO Q Voice Matrix`.
+5. Click the Play button in the top right corner.
+6. Say one of the voice commands into the USB microphone.
 
 | Keyword | LED Matrix Action |
 |---|---|
-| `Warmer-light` | Shows a sun icon |
-| `Cooler-light` | Shows a snowflake icon |
-| `Brighter` | Shows a plus icon |
-| `Dimmer` | Shows a minus icon |
+| `Warmer-light` or `nuan_yidian` | Shows a sun icon |
+| `Cooler-light` or `leng_yidian` | Shows a snowflake icon |
+| `Brighter` or `liang_yidian` | Shows a plus icon |
+| `Dimmer` or `an_yidian` | Shows a minus icon |
 | No command | Keeps showing a heart icon |
 
 ## How it Works
@@ -73,17 +95,18 @@ If you need to copy the example into the Arduino App Lab examples directory manu
 
 - `ALSAMicrophone(device="plughw:CARD=Audio,DEV=0", shared=False)` uses the connected USB microphone.
 - `KeywordSpotting(mic=mic)` initializes keyword spotting with that microphone.
-- `spotter.on_detect(...)` registers callbacks for each keyword.
-- `Bridge.call(...)` notifies the microcontroller which keyword was detected.
+- `spotter.on_detect(...)` registers callbacks for the English and pinyin labels.
+- `Bridge.call(...)` notifies the microcontroller which command was detected.
 
 ### Microcontroller side (`sketch/sketch.ino`)
 
 - `Arduino_LED_Matrix matrix;` controls the onboard LED matrix.
 - `Bridge.provide(...)` exposes handlers to the Python side.
 - `warmer_light()`, `cooler_light()`, `brighter()`, and `dimmer()` show different LED matrix icons, then return to the idle heart icon.
+- The sketch draws icons on an 8 x 13 visual canvas, then maps that canvas to the 8 x 12 logical matrix used by `matrix.renderBitmap(...)`. This compensates for the staggered physical layout of the onboard LEDs.
 
 ## Notes
 
-- This branch removes the external NeoDriver/NeoPixel dependency from the sketch.
 - The onboard LED matrix is monochrome, so `Warmer-light` and `Cooler-light` are represented by different icons instead of different colors.
-- If App Lab cannot find the USB microphone automatically, check the board with `arecord -l` and then explicitly configure the ALSA microphone device in `python/main.py`.
+- If App Lab cannot find the USB microphone, check the board with `arecord -l` and then verify the ALSA microphone device in `python/main.py`.
+- If the icons appear shifted or mirrored on a specific board orientation, adjust the `visualStart` mapping in `showVisualBitmap(...)` inside `sketch/sketch.ino`.
