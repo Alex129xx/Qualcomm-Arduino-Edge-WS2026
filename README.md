@@ -5,7 +5,7 @@ This branch adapts the original UNO Q EchoGlow example for a simpler hardware se
 - USB microphone for keyword spotting
 - Arduino UNO Q onboard LED matrix for visual feedback
 
-The app detects the keywords `Warmer-light`, `Cooler-light`, `Dimmer`, and `Brighter` with Arduino App Lab's `keyword_spotting` Brick. When a keyword is detected, the Python app calls the microcontroller through the Bridge, and the sketch shows a matching pattern on the onboard LED matrix.
+The app detects the keywords `Warmer-light`, `Cooler-light`, `Dimmer`, and `Brighter` with Arduino App Lab's `keyword_spotting` Brick. When a keyword is detected, the Python app calls the microcontroller through the Bridge, and the sketch shows a matching pattern on the onboard LED matrix. When no command is active, the matrix keeps showing a heart icon.
 
 ## Bricks Used
 
@@ -61,16 +61,18 @@ If you need to copy the example into the Arduino App Lab examples directory manu
 
 | Keyword | LED Matrix Action |
 |---|---|
-| `Warmer-light` | Blinks a warm/sun-style pattern |
-| `Cooler-light` | Blinks a cool/snowflake-style pattern |
-| `Brighter` | Blinks a full-bright matrix pattern |
-| `Dimmer` | Shows a small dim center pattern |
+| `Warmer-light` | Shows a sun icon |
+| `Cooler-light` | Shows a snowflake icon |
+| `Brighter` | Shows a plus icon |
+| `Dimmer` | Shows a minus icon |
+| No command | Keeps showing a heart icon |
 
 ## How it Works
 
 ### Python side (`python/main.py`)
 
-- `spotter = KeywordSpotting()` initializes keyword spotting with App Lab's default microphone path, intended here for a USB microphone.
+- `ALSAMicrophone(device="plughw:CARD=Audio,DEV=0", shared=False)` uses the connected USB microphone.
+- `KeywordSpotting(mic=mic)` initializes keyword spotting with that microphone.
 - `spotter.on_detect(...)` registers callbacks for each keyword.
 - `Bridge.call(...)` notifies the microcontroller which keyword was detected.
 
@@ -78,10 +80,10 @@ If you need to copy the example into the Arduino App Lab examples directory manu
 
 - `Arduino_LED_Matrix matrix;` controls the onboard LED matrix.
 - `Bridge.provide(...)` exposes handlers to the Python side.
-- `warmer_light()`, `cooler_light()`, `brighter()`, and `dimmer()` show different LED matrix patterns.
+- `warmer_light()`, `cooler_light()`, `brighter()`, and `dimmer()` show different LED matrix icons, then return to the idle heart icon.
 
 ## Notes
 
 - This branch removes the external NeoDriver/NeoPixel dependency from the sketch.
-- The onboard LED matrix is monochrome, so `Warmer-light` and `Cooler-light` are represented by different patterns instead of different colors.
+- The onboard LED matrix is monochrome, so `Warmer-light` and `Cooler-light` are represented by different icons instead of different colors.
 - If App Lab cannot find the USB microphone automatically, check the board with `arecord -l` and then explicitly configure the ALSA microphone device in `python/main.py`.
