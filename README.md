@@ -103,10 +103,11 @@ The old analog microphone setup script has been removed from this branch because
 - `Arduino_LED_Matrix matrix;` controls the onboard LED matrix.
 - `Bridge.provide(...)` exposes handlers to the Python side.
 - `warmer_light()`, `cooler_light()`, `brighter()`, and `dimmer()` show different LED matrix icons, then return to the idle heart icon.
-- The sketch draws icons on an 8 x 13 visual canvas, then maps that canvas to the 8 x 12 logical matrix used by `matrix.renderBitmap(...)`. This compensates for the staggered physical layout of the onboard LEDs.
+- The physical onboard LEDs are staggered/diagonal, so the board may look like it has an extra visual column. The Arduino LED Matrix API is still addressed as an 8-row x 12-column logical bitmap through `matrix.renderBitmap(...)`.
+- The current icons are intentionally sparse and centered so they remain readable on the staggered physical matrix.
 
 ## Notes
 
 - The onboard LED matrix is monochrome, so `Warmer-light` and `Cooler-light` are represented by different icons instead of different colors.
 - If App Lab cannot find the USB microphone, check the board with `arecord -l` and then verify the ALSA microphone device in `python/main.py`.
-- If the icons appear shifted or mirrored on a specific board orientation, adjust the `visualStart` mapping in `showVisualBitmap(...)` inside `sketch/sketch.ino`.
+- If the icons still look rotated or mirrored on your board orientation, adjust the bitmap arrays directly in `sketch/sketch.ino`.
