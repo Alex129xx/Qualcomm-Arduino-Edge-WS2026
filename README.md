@@ -101,13 +101,14 @@ The old analog microphone setup script has been removed from this branch because
 ### Microcontroller side (`sketch/sketch.ino`)
 
 - `Arduino_LED_Matrix matrix;` controls the onboard LED matrix.
+- `matrix.setGrayscaleBits(3)` enables 3-bit grayscale values from 0 to 7.
+- The official LED Matrix Painter example treats the UNO Q onboard matrix as an 8-row x 13-column grayscale buffer.
+- This sketch follows that drawing path and displays frames with `matrix.draw(frame)` instead of `matrix.renderBitmap(...)` or packed `loadFrame(...)` data.
 - `Bridge.provide(...)` exposes handlers to the Python side.
 - `warmer_light()`, `cooler_light()`, `brighter()`, and `dimmer()` show different LED matrix icons, then return to the idle heart icon.
-- The physical onboard LEDs are staggered/diagonal, so the board may look like it has an extra visual column. The Arduino LED Matrix API is still addressed as an 8-row x 12-column logical bitmap through `matrix.renderBitmap(...)`.
-- The current icons are intentionally sparse and centered so they remain readable on the staggered physical matrix.
 
 ## Notes
 
 - The onboard LED matrix is monochrome, so `Warmer-light` and `Cooler-light` are represented by different icons instead of different colors.
 - If App Lab cannot find the USB microphone, check the board with `arecord -l` and then verify the ALSA microphone device in `python/main.py`.
-- If the icons still look rotated or mirrored on your board orientation, adjust the bitmap arrays directly in `sketch/sketch.ino`.
+- If the icons still look rotated or mirrored on your board orientation, adjust the drawing helper functions in `sketch/sketch.ino`.
