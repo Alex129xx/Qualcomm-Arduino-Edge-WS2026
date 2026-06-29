@@ -7,56 +7,84 @@
 
 Arduino_LED_Matrix matrix;
 
+// The UNO Q LED matrix is 8 rows x 12 columns.
+// Using renderBitmap() keeps the icons readable and avoids confusing
+// packed hexadecimal frame orientation.
+
 // Default idle display: heart.
-const uint32_t HeartFrame[4] = {
-  0x00030c79,
-  0xe7fe3fc1,
-  0xf80f0060,
-  0x00000000,
+byte HeartBitmap[8][12] = {
+  {0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0},
+  {0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0},
+  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+  {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
+  {0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+  {0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0},
 };
 
 // Warmer-light: sun icon.
-const uint32_t SunFrame[4] = {
-  0x0602641f,
-  0x83fc3fc1,
-  0xf8264060,
-  0x00000000,
+byte SunBitmap[8][12] = {
+  {0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0},
+  {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0},
+  {1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
+  {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0},
+  {0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0},
 };
 
 // Cooler-light: snowflake icon.
-const uint32_t SnowflakeFrame[4] = {
-  0x06026416,
-  0x80f00f01,
-  0x68264060,
-  0x00000000,
+byte SnowflakeBitmap[8][12] = {
+  {0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+  {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1},
+  {0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0},
+  {0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0},
+  {0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0},
+  {0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0},
+  {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1},
+  {0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
 };
 
 // Brighter: plus icon.
-const uint32_t PlusFrame[4] = {
-  0x00006006,
-  0x01f81f80,
-  0x60060000,
-  0x00000000,
+byte PlusBitmap[8][12] = {
+  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
 };
 
 // Dimmer: minus icon.
-const uint32_t MinusFrame[4] = {
-  0x00000000,
-  0x01f81f80,
-  0x00000000,
-  0x00000000,
+byte MinusBitmap[8][12] = {
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 };
 
-void showCommandFrame(const uint32_t frame[4], uint16_t holdMs = 1200) {
-  matrix.loadFrame(frame);
+void showBitmap(byte bitmap[8][12]) {
+  matrix.renderBitmap(bitmap, 8, 12);
+}
+
+void showCommandBitmap(byte bitmap[8][12], uint16_t holdMs = 1200) {
+  showBitmap(bitmap);
   delay(holdMs);
-  matrix.loadFrame(HeartFrame);
+  showBitmap(HeartBitmap);
 }
 
 void setup() {
   matrix.begin();
   matrix.clear();
-  matrix.loadFrame(HeartFrame);
+  showBitmap(HeartBitmap);
 
   Bridge.begin();
   Bridge.provide("warmer_light", warmer_light);
@@ -68,17 +96,17 @@ void setup() {
 void loop() {}
 
 void warmer_light() {
-  showCommandFrame(SunFrame);
+  showCommandBitmap(SunBitmap);
 }
 
 void cooler_light() {
-  showCommandFrame(SnowflakeFrame);
+  showCommandBitmap(SnowflakeBitmap);
 }
 
 void dimmer() {
-  showCommandFrame(MinusFrame);
+  showCommandBitmap(MinusBitmap);
 }
 
 void brighter() {
-  showCommandFrame(PlusFrame);
+  showCommandBitmap(PlusBitmap);
 }
