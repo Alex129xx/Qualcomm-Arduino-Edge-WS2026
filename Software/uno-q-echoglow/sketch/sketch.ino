@@ -7,84 +7,103 @@
 
 Arduino_LED_Matrix matrix;
 
-// The UNO Q LED matrix is 8 rows x 12 columns.
-// Using renderBitmap() keeps the icons readable and avoids confusing
-// packed hexadecimal frame orientation.
+// The Arduino LED matrix API is addressed as 8 rows x 12 columns.
+// On the physical UNO Q board, the LEDs are staggered, so the display looks
+// more like an 8 x 13 visual grid. The icons below are therefore drawn on an
+// 8 x 13 visual canvas and then mapped back to the 8 x 12 matrix expected by
+// renderBitmap().
+
+const uint8_t ROWS = 8;
+const uint8_t LOGICAL_COLS = 12;
+const uint8_t VISUAL_COLS = 13;
+
+byte RenderFrame[ROWS][LOGICAL_COLS];
 
 // Default idle display: heart.
-byte HeartBitmap[8][12] = {
-  {0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0},
-  {0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0},
-  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
-  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
-  {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-  {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
-  {0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0},
-  {0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0},
+const byte HeartBitmap[ROWS][VISUAL_COLS] = {
+  {0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0},
+  {0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0},
+  {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+  {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
+  {0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0},
 };
 
-// Warmer-light: sun icon.
-byte SunBitmap[8][12] = {
-  {0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0},
-  {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0},
-  {1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
-  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-  {1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},
-  {0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0},
-  {0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0},
+// Warmer-light / nuan_yidian: sun icon.
+const byte SunBitmap[ROWS][VISUAL_COLS] = {
+  {0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0},
+  {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0},
+  {0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0},
+  {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0},
+  {0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0},
 };
 
-// Cooler-light: snowflake icon.
-byte SnowflakeBitmap[8][12] = {
-  {0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
-  {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1},
-  {0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0},
-  {0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0},
-  {0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0},
-  {0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0},
-  {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1},
-  {0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+// Cooler-light / leng_yidian: snowflake icon.
+const byte SnowflakeBitmap[ROWS][VISUAL_COLS] = {
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+  {0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0},
+  {0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0},
+  {0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0},
+  {0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0},
+  {0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
 };
 
-// Brighter: plus icon.
-byte PlusBitmap[8][12] = {
-  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
-  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0},
+// Brighter / liang_yidian: plus icon.
+const byte PlusBitmap[ROWS][VISUAL_COLS] = {
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
 };
 
-// Dimmer: minus icon.
-byte MinusBitmap[8][12] = {
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+// Dimmer / an_yidian: minus icon.
+const byte MinusBitmap[ROWS][VISUAL_COLS] = {
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 };
 
-void showBitmap(byte bitmap[8][12]) {
-  matrix.renderBitmap(bitmap, 8, 12);
+void showVisualBitmap(const byte visualBitmap[ROWS][VISUAL_COLS]) {
+  for (uint8_t row = 0; row < ROWS; row++) {
+    // Odd physical rows are visually shifted by one column. Selecting a
+    // different 12-column window for odd rows keeps vertical features aligned
+    // on the staggered physical matrix.
+    const uint8_t visualStart = row % 2;
+
+    for (uint8_t col = 0; col < LOGICAL_COLS; col++) {
+      RenderFrame[row][col] = visualBitmap[row][col + visualStart];
+    }
+  }
+
+  matrix.renderBitmap(RenderFrame, ROWS, LOGICAL_COLS);
 }
 
-void showCommandBitmap(byte bitmap[8][12], uint16_t holdMs = 1200) {
-  showBitmap(bitmap);
+void showCommandBitmap(const byte bitmap[ROWS][VISUAL_COLS], uint16_t holdMs = 1200) {
+  showVisualBitmap(bitmap);
   delay(holdMs);
-  showBitmap(HeartBitmap);
+  showVisualBitmap(HeartBitmap);
 }
 
 void setup() {
   matrix.begin();
   matrix.clear();
-  showBitmap(HeartBitmap);
+  showVisualBitmap(HeartBitmap);
 
   Bridge.begin();
   Bridge.provide("warmer_light", warmer_light);
